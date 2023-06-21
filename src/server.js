@@ -17,24 +17,52 @@ const handleListen = () => console.log(`Listening on http://localhost:3000`);
 const server = http.createServer(app);
 const io = new Server(server);
 //realtime chat with socketIO
+const getPublicRooms = () => {
+  const { rooms, sids } = io.sockets.adapter;
+  const publicRooms = [];
+  rooms.forEach((_, key) => {
+    if (sids.get(key) === undefined) {
+      publicRooms.push(key);
+    }
+  });
+
+  return publicRooms;
+};
 io.on("connection", (socket) => {
-  socket.on("update item", (arg1, arg2, callback) => {
-    console.log(arg1); // 1
-    console.log(arg2); // { name: "updated" }
-    setTimeout(() => {
-      callback({
-        status: "ok",
-      });
-    }, 1000);
-    socket.emit("callback test", () => {
-      console.log("hello");
+  socket["nickname"] = "annonymous";
+  socket.on("enter_room", ({ roomName, nickname }, showRoom) => {
+    showRoom();
+    socket.join(roomName);
+    socket["nickname"] = nickname;
+    //send message except myself
+    socket
+      .to(roomName)
+      .emit("welcome", { msg: `${socket["nickname"]} joined` });
+    io.sockets.emit("room_change", getPublicRooms());
+  });
+  socket.on("room_list", (getRoomList) => {
+    getRoomList(getPublicRooms());
+  });
+  socket.on("disconnecting", () => {
+    socket.rooms.forEach((room) => {
+      socket.to(room).emit("bye", { msg: `${socket["nickname"]} left` });
+    });
+  });
+  socket.on("disconnect", () => {
+    io.sockets.emit("room_change", getPublicRooms());
+  });
+  socket.on("submit_msg", ({ msg, roomName, nickname }, done) => {
+    socket.to(roomName).emit("submit_msg", { msg, nickname });
+    done();
+  });
+  socket.on("changed_nickname", ({ nickname }) => {
+    const oldNickname = socket.nickname;
+    socket["nickname"] = nickname;
+    socket.rooms.forEach((room) => {
+      socket.to(room).emit("changed_nickname", { nickname, oldNickname });
     });
   });
 });
-
-const cb = () => {
-  console.log("print cb");
-};
 
 server.listen(3000, handleListen);
 
