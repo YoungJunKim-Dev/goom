@@ -20,32 +20,51 @@ const io = new Server(server);
 const getPublicRooms = () => {
   const { rooms, sids } = io.sockets.adapter;
   const publicRooms = [];
-  rooms.forEach((_, key) => {
+  rooms.forEach((value, key) => {
     if (sids.get(key) === undefined) {
-      publicRooms.push(key);
+      const room = { [key]: value.size };
+      publicRooms.push(room);
     }
   });
 
   return publicRooms;
 };
+const getCount = (roomName) => {
+  let count = 0;
+  const { rooms } = io.sockets.adapter;
+  rooms.forEach((value, key) => {
+    if (key === roomName) {
+      count = value.size;
+      console.log(key);
+      console.log(count);
+    }
+  });
+  return count;
+};
 io.on("connection", (socket) => {
   socket["nickname"] = "annonymous";
   socket.on("enter_room", ({ roomName, nickname }, showRoom) => {
-    showRoom();
     socket.join(roomName);
     socket["nickname"] = nickname;
     //send message except myself
-    socket
-      .to(roomName)
-      .emit("welcome", { msg: `${socket["nickname"]} joined` });
-    io.sockets.emit("room_change", getPublicRooms());
+    const count = getCount(roomName);
+    const rooms = getPublicRooms();
+    showRoom(count);
+    socket.to(roomName).emit("welcome", {
+      msg: `${socket["nickname"]} joined`,
+      roomName,
+      count,
+    });
+
+    io.sockets.emit("room_change", rooms);
   });
   socket.on("room_list", (getRoomList) => {
     getRoomList(getPublicRooms());
   });
   socket.on("disconnecting", () => {
     socket.rooms.forEach((room) => {
-      socket.to(room).emit("bye", { msg: `${socket["nickname"]} left` });
+      const count = getCount(room);
+      socket.to(room).emit("bye", { msg: `${socket["nickname"]} left`, count });
     });
   });
   socket.on("disconnect", () => {

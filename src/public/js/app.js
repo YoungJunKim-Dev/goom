@@ -26,8 +26,9 @@ const roomChange = (rooms) => {
   } else {
     roomH2.innerText = "Opened Room List";
     rooms.forEach((room) => {
+      //room list 갱신
       const li = document.createElement("li");
-      li.innerText = room;
+      li.innerText = `${Object.keys(room)[0]}(${Object.values(room)[0]})`;
       ul.appendChild(li);
     });
   }
@@ -44,17 +45,19 @@ const addMessage = (message) => {
   li.innerText = message;
   ul.appendChild(li);
 };
-const showRoom = (name) => {
+const showRoom = (name, count) => {
   welcome.hidden = true;
   room.hidden = false;
   const roomTitle = room.querySelector("h1");
-  roomTitle.innerText = `Welcome to ${name} Room`;
+  roomTitle.innerText = `Welcome to ${name} Room(${count})`;
 };
 const handleRoomSubmit = (event) => {
   event.preventDefault();
   const input = welcomeForm.querySelector("input");
   roomName = input.value;
-  socket.emit("enter_room", { roomName, nickname }, () => showRoom(roomName));
+  socket.emit("enter_room", { roomName, nickname }, (count) =>
+    showRoom(roomName, count)
+  );
 };
 const handleMsgSubmit = (event) => {
   event.preventDefault();
@@ -81,11 +84,16 @@ const handleNicknameChange = (event) => {
   nicknameChange.hidden = true;
 };
 //socket
-socket.on("welcome", ({ msg }) => {
+socket.on("welcome", ({ msg, roomName, count }) => {
   addMessage(msg);
+  console.log(msg, roomName, count);
+  const roomTitle = room.querySelector("h1");
+  roomTitle.innerText = `Welcome to ${roomName} Room(${count})`;
 });
-socket.on("bye", ({ msg }) => {
+socket.on("bye", ({ msg, count }) => {
   addMessage(msg);
+  const roomTitle = room.querySelector("h1");
+  roomTitle.innerText = `Welcome to ${roomName} Room(${count - 1})`;
 });
 socket.on("submit_msg", ({ msg, nickname }) => {
   addMessage(`${nickname} : ${msg}`);
@@ -94,7 +102,6 @@ socket.on("changed_nickname", ({ nickname, oldNickname }) => {
   addMessage(`${oldNickname}'s nickname has changed to ${nickname}`);
 });
 socket.on("room_change", (rooms) => {
-  console.log("here");
   roomChange(rooms);
 });
 
