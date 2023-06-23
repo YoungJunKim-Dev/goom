@@ -9,26 +9,19 @@ html(lang="en")
         header
             h1 Goom
         main
-            div#nicknameSave
-                form
-                    input(placeholder="Enter your nickname", required, type="text")
-                    button#save Save
-            div#nicknameChange
-                form
-                    h1 Your Nick name is
-                    h2#savedNickname Saved Nickname
-                    button#change Change
             div#welcome
                 form
-                    h2 Opened Room List
-                    ul
-                    input(placeholder="Enter room name", required, type="text")
-                    button Enter Room
-            div#room
-                h1 Room Name
-                ul
-                form
-                    input(placeholder="")
-                    button Send
+                    input(placeholder="room name", required, type = "text")
+                    button Enter room
+            div#call
+                video#myFace(autoplay, playsinline, width="400", height="400")
+                button#audioButton Mute
+                button#cameraButton Camera Off
+                select#cameras
+            div#peerCall
+                video#peerFace(autoplay, playsinline, width="400", height="400")
+                button#peerAudioButton Mute
+                button#peerCameraButton Camera Off
+                select#peerCameras
         script(src="/socket.io/socket.io.js")
         script(src="/public/js/app.js")

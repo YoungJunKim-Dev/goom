@@ -16,101 +16,22 @@ const handleListen = () => console.log(`Listening on http://localhost:3000`);
 
 const server = http.createServer(app);
 const io = new Server(server);
-//realtime chat with socketIO
-const getPublicRooms = () => {
-  const { rooms, sids } = io.sockets.adapter;
-  const publicRooms = [];
-  rooms.forEach((value, key) => {
-    if (sids.get(key) === undefined) {
-      const room = { [key]: value.size };
-      publicRooms.push(room);
-    }
-  });
+//videocall with WebRTC
 
-  return publicRooms;
-};
-const getCount = (roomName) => {
-  let count = 0;
-  const { rooms } = io.sockets.adapter;
-  rooms.forEach((value, key) => {
-    if (key === roomName) {
-      count = value.size;
-      console.log(key);
-      console.log(count);
-    }
-  });
-  return count;
-};
 io.on("connection", (socket) => {
-  socket["nickname"] = "annonymous";
-  socket.on("enter_room", ({ roomName, nickname }, showRoom) => {
+  socket.on("join_room", (roomName) => {
     socket.join(roomName);
-    socket["nickname"] = nickname;
-    //send message except myself
-    const count = getCount(roomName);
-    const rooms = getPublicRooms();
-    showRoom(count);
-    socket.to(roomName).emit("welcome", {
-      msg: `${socket["nickname"]} joined`,
-      roomName,
-      count,
-    });
-
-    io.sockets.emit("room_change", rooms);
+    socket.to(roomName).emit("welcome");
   });
-  socket.on("room_list", (getRoomList) => {
-    getRoomList(getPublicRooms());
+  socket.on("offer", (offer, roomName) => {
+    socket.to(roomName).emit("offer", offer);
   });
-  socket.on("disconnecting", () => {
-    socket.rooms.forEach((room) => {
-      const count = getCount(room);
-      socket.to(room).emit("bye", { msg: `${socket["nickname"]} left`, count });
-    });
+  socket.on("answer", (answer, roomName) => {
+    socket.to(roomName).emit("answer", answer);
   });
-  socket.on("disconnect", () => {
-    io.sockets.emit("room_change", getPublicRooms());
-  });
-  socket.on("submit_msg", ({ msg, roomName, nickname }, done) => {
-    socket.to(roomName).emit("submit_msg", { msg, nickname });
-    done();
-  });
-  socket.on("changed_nickname", ({ nickname }) => {
-    const oldNickname = socket.nickname;
-    socket["nickname"] = nickname;
-    socket.rooms.forEach((room) => {
-      socket.to(room).emit("changed_nickname", { nickname, oldNickname });
-    });
+  socket.on("ice", (data, roomName) => {
+    socket.to(roomName).emit("ice", data);
   });
 });
 
 server.listen(3000, handleListen);
-
-//realtime chat with websocket
-// //socket list
-// const sockets = [];
-
-// wss.on("connection", (socket) => {
-//   console.log("back connected");
-//   sockets.push(socket);
-//   socket["nickname"] = "annonymous";
-//   //get Message
-//   socket.on("message", (msg) => {
-//     const { type, payload } = JSON.parse(msg);
-//     switch (type) {
-//       case "message":
-//         sockets.forEach((sk) => {
-//           sk.send(`${socket.nickname} : ${payload}`);
-//         });
-//         break;
-//       case "nickname":
-//         socket["nickname"] = payload;
-//         break;
-//       default:
-//         break;
-//     }
-//   });
-//   //close
-//   socket.on("close", () => {
-//     console.log("disconnected");
-//   });
-// });
